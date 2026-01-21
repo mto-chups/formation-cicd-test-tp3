@@ -5,6 +5,7 @@ inputs:
     required: false
     default: "21"
     description: "Java-21"
+
 runs:
   using: "composite"
   steps:
@@ -12,18 +13,21 @@ runs:
       uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: "21"
+        java-version: ${{ inputs.java-version }}
         cache: maven
 
     - name: Build (Maven)
+      shell: bash
       run: mvn -q clean package
 
     - name: Start API (background)
+      shell: bash
       run: |
         nohup java -jar target/*.jar > app.log 2>&1 &
         echo $! > app.pid
 
     - name: Wait for API to be ready
+      shell: bash
       run: |
         for i in {1..30}; do
           if curl -sSf http://localhost:8080/health > /dev/null; then
