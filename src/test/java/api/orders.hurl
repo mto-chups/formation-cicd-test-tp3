@@ -3,7 +3,7 @@ HTTP 200
 
 [Asserts]
 #S'assurer que c'est un JSON
-header "Content-Type" == "application/json"
+header "Content-Type" == "application/json; charset=utf-8"
 
 #S'assurer que le json contient un tableau avec 2 éléments
 jsonpath "$" count == 2
