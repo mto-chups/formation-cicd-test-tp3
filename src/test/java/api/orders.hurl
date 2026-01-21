@@ -9,7 +9,11 @@ header "Content-Type" == "application/json"
 jsonpath "$" count == 2
 
 #Vérifie la ligne 1
-jsonpath "$[0]" == { "id": 1, "product": "Laptop", "price": 1200.0 }
+jsonpath "$[0].id" == 1
+jsonpath "$[0].product" == "Laptop"
+jsonpath "$[0].price" == 1200.0
 
 #Vérifie la ligne 2
-jsonpath "$[1]" == { "id": 2, "product": "Mouse",  "price": 25.0 }
+jsonpath "$[1].id" == 2
+jsonpath "$[1].product" == "Mouse"
+jsonpath "$[1].price" == 25.0
