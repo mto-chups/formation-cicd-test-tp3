@@ -102,7 +102,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: zap-reports-${{ env.TODAY }}
+          name: zap-reports-${{ env.NOW }}
           path: |
             report_html.html
             report_md.md
