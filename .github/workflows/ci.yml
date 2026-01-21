@@ -85,7 +85,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           allow_issue_writing: false
           fail_action: false
-          artifact_name: zap-reports-${{ env.TODAY }}
+          artifact_name: zap-reports-${{ env.NOW }}
 
       - name: Stop API
         if: always()
@@ -97,12 +97,3 @@ jobs:
       - name: Show app logs on failure
         if: failure()
         run: tail -n 200 app.log || true
-
-      - name: Upload ZAP reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-reports-${{ env.NOW }}
-          path: |
-            report_html.html
-            report_md.md
