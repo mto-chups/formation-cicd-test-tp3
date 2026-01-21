@@ -84,6 +84,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+          cache: maven
 
       - name: Build (Maven)
         run: mvn -q clean package
@@ -93,19 +94,19 @@ jobs:
           nohup java -jar target/*.jar > app.log 2>&1 &
           echo $! > app.pid
 
-          - name: Wait for API to be ready
-            run: |
-              for i in {1..30}; do
-                if curl -sSf http://localhost:8080/health > /dev/null; then
-                  echo "API is up!"
-                  exit 0
-                fi
-                echo "Waiting API..."
-                sleep 2
-              done
-              echo "API not ready"
-              tail -n 200 app.log || true
-              exit 1
+      - name: Wait for API to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -sSf http://localhost:8080/health > /dev/null; then
+              echo "API is up!"
+              exit 0
+            fi
+            echo "Waiting API..."
+            sleep 2
+          done
+          echo "API not ready"
+          tail -n 200 app.log || true
+          exit 1
 
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.15.0
