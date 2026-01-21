@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ⚠️ Ici, il faut démarrer ton API AVANT d'attendre /health.
+      # Exemple si tu as un docker-compose :
+      # - name: Start API
+      #   run: docker compose up -d --build
+
+      - name: Wait for API to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -sSf http://localhost:8080/health > /dev/null; then
+              echo "API is up!"
+              exit 0
+            fi
+            echo "Waiting API..."
+            sleep 2
+          done
+          echo "API not ready"
+          tail -n 200 app.log || true
+          exit 1
+
+      - name: Run API tests (Hurl via Docker)
+        run: |
+          docker run --rm \
+            --add-host=host.docker.internal:host-gateway \
+            -v ${{ github.workspace }}:/work \
+            ghcr.io/orange-opensource/hurl:latest \
+            --test /work/src/test/java/api
