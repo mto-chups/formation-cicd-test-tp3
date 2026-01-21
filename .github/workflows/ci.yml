@@ -51,8 +51,7 @@ jobs:
             --test /work/src/test/java/api \
             --verbose \
             --report-junit /work/api-test-reports/junit.xml \
-            --report-html /work/api-test-reports/report.html \
-            --report-json /work/api-test-reports/report.json
+            --report-html /work/api-test-reports/report.html
 
       - name: Upload API test reports
         if: always()
