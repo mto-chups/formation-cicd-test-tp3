@@ -3,61 +3,40 @@ name: CI
 on:
   push:
 
+env:
+  TODAY: ${{ github.run_started_at }}
+
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      today: ${{ steps.date.outputs.today }}
+      datetime: ${{ steps.date.outputs.datetime }}
+    steps:
+      - id: date
+        run: |
+          echo "today=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+          echo "datetime=$(date +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_OUTPUT
   api-tests:
     runs-on: ubuntu-latest
+    needs: prepare
+
+    env:
+      TODAY: ${{ needs.prepare.outputs.today }}
+      NOW: ${{ needs.prepare.outputs.datetime }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: Build (Maven)
-        run: mvn -q clean package
-
-      - name: Start API (background)
-        run: |
-          nohup java -jar target/*.jar > app.log 2>&1 &
-          echo $! > app.pid
-
-      - name: Wait for API to be ready
-        run: |
-          for i in {1..30}; do
-            if curl -sSf http://localhost:8080/health > /dev/null; then
-              echo "API is up!"
-              exit 0
-            fi
-            echo "Waiting API..."
-            sleep 2
-          done
-          echo "API not ready"
-          tail -n 200 app.log || true
-          exit 1
-
-      - name: Prepare API test reports directory
-        run: mkdir -p api-test-reports
-
-      - name: Run API tests (Hurl via Docker)
-        run: |
-          docker run --rm \
-            --add-host=host.docker.internal:host-gateway \
-            -v ${{ github.workspace }}:/work \
-            ghcr.io/orange-opensource/hurl:latest \
-            --test /work/src/test/java/api \
-            --verbose \
-            --report-junit /work/api-test-reports/junit.xml \
-            --report-html /work/api-test-reports/report.html
+      - name: Build + start API
+        uses: ./.github/actions/start-api
 
       - name: Upload API test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: api-test-reports
+          name: api-test-reports-${{ env.TODAY }}
           path: api-test-reports
 
       - name: Stop API
@@ -73,40 +52,20 @@ jobs:
 
   security-tests:
     runs-on: ubuntu-latest
-    needs: api-tests
+    needs:
+      - api-tests
+      - prepare
+
+    env:
+      TODAY: ${{ needs.prepare.outputs.today }}
+      NOW: ${{ needs.prepare.outputs.datetime }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
-
-      - name: Build (Maven)
-        run: mvn -q clean package
-
-      - name: Start API (background)
-        run: |
-          nohup java -jar target/*.jar > app.log 2>&1 &
-          echo $! > app.pid
-
-      - name: Wait for API to be ready
-        run: |
-          for i in {1..30}; do
-            if curl -sSf http://localhost:8080/health > /dev/null; then
-              echo "API is up!"
-              exit 0
-            fi
-            echo "Waiting API..."
-            sleep 2
-          done
-          echo "API not ready"
-          tail -n 200 app.log || true
-          exit 1
+      - name: Build + start API
+        uses: ./.github/actions/start-api
 
       - name: Set date
         run: echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
