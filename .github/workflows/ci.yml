@@ -11,10 +11,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ⚠️ Ici, il faut démarrer ton API AVANT d'attendre /health.
-      # Exemple si tu as un docker-compose :
-      # - name: Start API
-      #   run: docker compose up -d --build
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Build (Maven)
+        run: mvn -q clean package
+
+      - name: Start API (background)
+        run: |
+          nohup java -jar target/*.jar > app.log 2>&1 &
+          echo $! > app.pid
 
       - name: Wait for API to be ready
         run: |
@@ -30,10 +39,34 @@ jobs:
           tail -n 200 app.log || true
           exit 1
 
+      - name: Prepare API test reports directory
+        run: mkdir -p api-test-reports
+
       - name: Run API tests (Hurl via Docker)
         run: |
           docker run --rm \
             --add-host=host.docker.internal:host-gateway \
             -v ${{ github.workspace }}:/work \
             ghcr.io/orange-opensource/hurl:latest \
-            --test /work/src/test/java/api
+            --test /work/src/test/java/api \
+            --report-junit /work/api-test-reports/junit.xml \
+            --report-html /work/api-test-reports/report.html \
+            --report-json /work/api-test-reports/report.json
+
+      - name: Upload API test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-reports
+          path: api-test-reports
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill "$(cat app.pid)" || true
+          fi
+
+      - name: Show app logs on failure
+        if: failure()
+        run: tail -n 200 app.log || true
