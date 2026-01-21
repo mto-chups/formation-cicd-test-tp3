@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build + start API
-        uses: ./.github/actions/start-api
+        uses: .github/actions/start-api
 
       - name: Upload API test reports
         if: always()
@@ -65,7 +65,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build + start API
-        uses: ./.github/actions/start-api
+        uses: .github/actions/start-api
 
       - name: Set date
         run: echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
