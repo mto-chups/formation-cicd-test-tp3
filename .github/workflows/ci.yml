@@ -70,3 +70,48 @@ jobs:
       - name: Show app logs on failure
         if: failure()
         run: tail -n 200 app.log || true
+
+  security-tests:
+    runs-on: ubuntu-latest
+    needs: api-tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Build (Maven)
+        run: mvn -q clean package
+
+      - name: Start API (background)
+        run: |
+          nohup java -jar target/*.jar > app.log 2>&1 &
+          echo $! > app.pid
+
+          - name: Wait for API to be ready
+            run: |
+              for i in {1..30}; do
+                if curl -sSf http://localhost:8080/health > /dev/null; then
+                  echo "API is up!"
+                  exit 0
+                fi
+                echo "Waiting API..."
+                sleep 2
+              done
+              echo "API not ready"
+              tail -n 200 app.log || true
+              exit 1
+
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: "http://localhost:8080"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allow_issue_writing: false
+          fail_action: false          # mets true si tu veux que des alertes fassent échouer le job
+          artifact_name: zap-reports  # l’action attache déjà un artifact avec les rapports
